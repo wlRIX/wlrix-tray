@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        # smithay-client-toolkit's keyboard support links the system xkbcommon, so its build
+        # script needs xkbcommon.pc (from libxkbcommon-dev) via pkg-config. The tray does read
+        # keys -- Escape closes a posted menu -- so it is not optional here.
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            pkg-config \
+            libxkbcommon-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Format
+        run: cargo fmt --all --check
+      # `--all-targets` covers `examples/fake_item.rs`, the synthetic item the tray is driven with
+      # by hand. Nothing else compiles it, so without this it rots.
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Build
+        run: cargo build --verbose
+      # The tests are the layout, the menu geometry, the config, the pixmap decoding and the
+      # dbusmenu parser. The bus and the surface need a session and a compositor and are verified
+      # by hand, as the README describes.
+      - name: Test
+        run: cargo test --verbose
