@@ -28,8 +28,8 @@
 //! nothing and the tray draws a placeholder next to a perfectly ordinary input method.
 //!
 //! So the configured theme is searched first and the bare lookup is the fallback behind it. The
-//! default is Adwaita, which is what a GTK application would pick and what every other tray on a
-//! Linux desktop is therefore already showing.
+//! default is wlrix, the IRIX icon set `wlrix-assets` installs, which inherits Adwaita -- what a
+//! GTK application would pick and what every other tray on a Linux desktop is already showing.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

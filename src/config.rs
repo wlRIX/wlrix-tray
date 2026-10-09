@@ -11,7 +11,7 @@
 //!
 //! [appearance]
 //! palette = "gotham"           # the color scheme; default is "classic"
-//! icon_theme = "Adwaita"       # where an item's IconName is looked up; "" for none
+//! icon_theme = "wlrix"         # where an item's IconName is looked up; "" for none
 //!
 //! [metrics]
 //! icon = 22                    # the icon artwork, square
@@ -95,10 +95,10 @@ pub struct AppearanceConfig {
     /// The icon theme an item's `IconName` is looked up in, before hicolor and
     /// `/usr/share/pixmaps`.
     ///
-    /// Defaults to Adwaita, and that default earns its keep: fcitx5 publishes
-    /// `IconName = "input-keyboard-symbolic"` with no pixmap and no theme path, and that file is
-    /// in every icon theme *except* hicolor -- so without a named theme the input-method indicator
-    /// draws as a placeholder. See [`crate::icons`].
+    /// Defaults to wlrix, which inherits Adwaita, and having a named default earns its keep:
+    /// fcitx5 publishes `IconName = "input-keyboard-symbolic"` with no pixmap and no theme path,
+    /// and that file is in every icon theme *except* hicolor -- so without a named theme the
+    /// input-method indicator draws as a placeholder. See [`crate::icons`].
     ///
     /// An empty string means "no named theme", for a machine whose themes are all wrong for a
     /// 22-pixel cell.
@@ -107,7 +107,10 @@ pub struct AppearanceConfig {
 }
 
 /// What [`AppearanceConfig::icon_theme`] means when the file does not say.
-const DEFAULT_ICON_THEME: &str = "Adwaita";
+///
+/// The IRIX icon set `wlrix-assets` installs. It draws no status icons of its own, but it
+/// inherits Adwaita, so `input-keyboard-symbolic` and the like resolve exactly as before.
+const DEFAULT_ICON_THEME: &str = "wlrix";
 
 impl AppearanceConfig {
     /// The icon theme to search first.
@@ -298,7 +301,7 @@ mod tests {
     fn the_icon_theme_defaults_to_something_that_has_the_icons() {
         // Not hicolor: fcitx5's `input-keyboard-symbolic` is in every theme except that one, so
         // an empty default would draw a placeholder for the commonest item there is.
-        assert_eq!(config("").appearance.icon_theme(), "Adwaita");
+        assert_eq!(config("").appearance.icon_theme(), "wlrix");
         assert_eq!(
             config("[appearance]\nicon_theme = \"hicolor\"\n")
                 .appearance

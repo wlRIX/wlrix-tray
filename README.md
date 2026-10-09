@@ -85,7 +85,7 @@ hide_when_empty = true       # with nothing to show, show nothing at all
 
 [appearance]
 palette = "gotham"           # the color scheme; default is "classic"
-icon_theme = "Adwaita"       # where an item's IconName is looked up; "" for none
+icon_theme = "wlrix"         # where an item's IconName is looked up; "" for none
 
 [metrics]
 icon = 22                    # the icon artwork, square
@@ -107,8 +107,9 @@ hidden = false
 
 fcitx5 publishes `IconName = "input-keyboard-symbolic"` with no pixmap and no `IconThemePath`. That file is in Adwaita —
 and in every other icon theme — and in **hicolor** on none of them, and hicolor plus `/usr/share/pixmaps` is all a
-themeless lookup searches. So without a named theme the commonest item there is draws as a placeholder. Adwaita is what
-a GTK application would pick and therefore what every other tray on the machine is already showing.
+themeless lookup searches. So without a named theme the commonest item there is draws as a placeholder. The default is
+`wlrix`, the IRIX icon set `wlrix-assets` installs; it inherits Adwaita, so a status icon it does not draw resolves to
+the one every other tray on the machine is already showing.
 
 ### `[[item]]` is not a settings-daemon key
 
