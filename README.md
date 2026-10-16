@@ -38,8 +38,10 @@ Two consequences worth knowing before changing anything here:
   compositor's `layer_under` picks the topmost bottom-layer surface by bounding box; when its input region rejects the
   point it falls through to the **background** layer, not to the desktop underneath. A transparent margin around the
   tray would therefore swallow clicks that belong to the desktop icons.
-- **It must start after `wlrix-desktop`.** Both are on the bottom layer, and the one that maps later sorts above.
-  `wlrix-session`'s `DEFAULT_APPS` puts it there.
+- **It sorts above `wlrix-desktop` because the compositor says so, not because of start order.** Both are on the
+  bottom layer, and `wlrix-compositor` stacks a surface anchored to all four edges beneath its neighbors on the same
+  layer. Map order used to decide it. That held at login but not after an idle blank: every layer surface is closed
+  when the monitors drop, and whichever client rebuilt first ended up underneath.
 
 ### Menus are drawn in this surface, not in an `xdg_popup`
 

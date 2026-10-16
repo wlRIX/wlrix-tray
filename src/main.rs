@@ -4,9 +4,9 @@
 //! Hosts the status icons background programs publish over `org.kde.StatusNotifierItem`, in a
 //! small dock in the corner of the desktop -- IRIX-style, bottom left by default.
 //!
-//! Started by `wlrix-session` after `wlrix-desktop`, which is load-bearing: both are on the
-//! wlr-layer-shell bottom layer, and the one that maps later sorts above. It is a Wayland client
-//! and a D-Bus service at once; see [`wlrix_tray::ui`] and [`wlrix_tray::sni`].
+//! It shares the wlr-layer-shell bottom layer with `wlrix-desktop` and sorts above it, because
+//! `wlrix-compositor` stacks a surface anchored to all four edges beneath its neighbors. It is a
+//! Wayland client and a D-Bus service at once; see [`wlrix_tray::ui`] and [`wlrix_tray::sni`].
 
 fn main() {
     // No option here combines with another except `--replace`, so the arguments are walked and

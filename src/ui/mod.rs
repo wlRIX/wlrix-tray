@@ -25,9 +25,10 @@
 //!   **background** layer, not to the desktop underneath. A transparent margin around the tray
 //!   would therefore swallow clicks that belong to the desktop icons. See [`crate::layout`].
 //!
-//! The same ordering fact runs the other way: the tray must be started *after* `wlrix-desktop`, so
-//! it maps later and sorts above it within the bottom layer. `wlrix-session`'s `DEFAULT_APPS` puts
-//! it there.
+//! The tray sorts above `wlrix-desktop` within the bottom layer whichever of them maps first:
+//! `wlrix-compositor` stacks a surface anchored to all four edges beneath its neighbors. Start
+//! order used to decide it, and it only held until the first idle blank. Every layer surface is
+//! closed then, and the two clients rebuild theirs in whatever order they hear about it.
 //!
 //! # Menus live in this surface, not in an `xdg_popup`
 //!
@@ -557,6 +558,13 @@ impl Tray {
     /// The one place the strip's size is decided, so that "an item arrived", "a menu opened" and
     /// "the config changed" all take the same path to the screen.
     fn refresh(&mut self, qh: &QueueHandle<Self>) {
+        self.refresh_avoiding(qh, None);
+    }
+
+    /// [`Tray::refresh`], never building the surface on `going`.
+    ///
+    /// For `output_destroyed`, which sctk calls while the output is still in its list.
+    fn refresh_avoiding(&mut self, qh: &QueueHandle<Self>, going: Option<&WlOutput>) {
         self.shown = self
             .items
             .visible(&self.config)
@@ -595,7 +603,7 @@ impl Tray {
             self.output_size,
         );
 
-        self.ensure_surface(qh);
+        self.ensure_surface(qh, going);
         let wanted = (self.frame.width as u32, self.frame.height as u32);
         if wanted != self.requested
             && let Some(layer) = self.layer.as_ref()
@@ -643,12 +651,12 @@ impl Tray {
             .cloned()
     }
 
-    /// Create the strip surface, once there is an output to put it on.
-    fn ensure_surface(&mut self, qh: &QueueHandle<Self>) {
+    /// Create the strip surface, once there is an output other than `going` to put it on.
+    fn ensure_surface(&mut self, qh: &QueueHandle<Self>, going: Option<&WlOutput>) {
         if self.layer.is_some() {
             return;
         }
-        let Some(output) = self.pick_output(None) else {
+        let Some(output) = self.pick_output(going) else {
             return;
         };
         self.output_size = self
@@ -661,8 +669,9 @@ impl Tray {
             qh,
             surface,
             // `Bottom`, not `Top`: IRIX's tray sat on the desktop rather than over the windows.
-            // It is above `wlrix-bg` on the background layer, and -- because it maps later --
-            // above `wlrix-desktop`, which shares this layer.
+            // It is above `wlrix-bg` on the background layer, and above `wlrix-desktop`, which
+            // shares this layer: the compositor stacks a surface anchored to all four edges
+            // beneath its neighbors, whichever of them mapped first.
             Layer::Bottom,
             Some("wlrix-tray"),
             Some(&output),
@@ -1080,8 +1089,13 @@ impl OutputHandler for Tray {
         // unplugging a screen moves the tray rather than losing it. Leaving `layer` set to a
         // surface on the departed output would be the end of the tray: `ensure_surface` returns
         // early when there is one, so the monitors coming back would never build a new surface.
+        //
+        // The departing output has to be named here. sctk calls this hook before it takes the
+        // output out of its list, so a plain `refresh` can pick the same output again. The new
+        // surface then sits on a monitor that no longer exists, is never configured, and the
+        // tray stays invisible for the rest of the session even though the process is alive.
         self.forget_surface();
-        self.refresh(qh);
+        self.refresh_avoiding(qh, Some(&output));
     }
 }
 
