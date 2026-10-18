@@ -80,11 +80,7 @@ impl Tooltip {
         // the title it belongs to.
         let title_width = text.width(&tip.title);
         let text_width = title_width.clamp(0, MAX_WIDTH);
-        let description = if description.is_empty() {
-            Vec::new()
-        } else {
-            text.wrap(&description, MAX_WIDTH.max(text_width))
-        };
+        let description = paragraphs(&description, MAX_WIDTH.max(text_width), text);
 
         // A plain loop rather than an iterator chain: `text` is borrowed mutably, so a closure
         // capturing it cannot coexist with anything else that uses it.
@@ -121,6 +117,45 @@ impl Tooltip {
         }
         rows
     }
+}
+
+/// Break a description into lines: at its own line breaks first, then wrapped to `width`.
+///
+/// The breaks have to be found here. [`Text::wrap`] measures a run as the font shapes it, and a
+/// run with a `\n` in it shapes as two lines of which only the first is measured -- so the whole
+/// description came back as one "line" that fit, the panel was sized for one, and the font then
+/// drew two, the second off the bottom of the panel. `wlrix-network` puts the address on a line of
+/// its own, which is how it showed.
+///
+/// Blank lines are kept, as a sender's way of spacing its text, except at the end. Past
+/// [`MAX_LINES`] the last line kept ends in an ellipsis, so a cut is visible.
+fn paragraphs(description: &str, width: i32, text: &mut impl Text) -> Vec<String> {
+    let mut lines: Vec<String> = Vec::new();
+    for paragraph in description.split('\n') {
+        let paragraph = paragraph.trim_end_matches('\r');
+        if paragraph.trim().is_empty() {
+            lines.push(String::new());
+            continue;
+        }
+        // One line past the limit is enough to know there is a cut; wrapping the rest of a long
+        // description would be work for lines nobody sees.
+        if lines.len() > MAX_LINES {
+            break;
+        }
+        lines.extend(text.wrap(paragraph, width));
+    }
+    while lines.last().is_some_and(String::is_empty) {
+        lines.pop();
+    }
+    if lines.len() > MAX_LINES {
+        lines.truncate(MAX_LINES);
+        if let Some(last) = lines.last_mut()
+            && !last.ends_with('…')
+        {
+            last.push('…');
+        }
+    }
+    lines
 }
 
 #[cfg(test)]
@@ -215,6 +250,33 @@ mod tests {
         }
         let last = *tooltip.rows().last().unwrap();
         assert!(last.bottom() + BEVEL + PAD <= tooltip.height);
+    }
+
+    #[test]
+    fn line_breaks_in_the_description_are_rows_of_their_own() {
+        // What wlrix-network publishes. Sized as one row, the address was drawn below the panel.
+        let tooltip =
+            laid_out("gazzotto", "Signal 74%, secured\n10.0.0.56/24").expect("something to show");
+        assert_eq!(
+            tooltip.description,
+            vec!["Signal 74%, secured", "10.0.0.56/24"]
+        );
+        assert_eq!(tooltip.rows().len(), 3);
+        let last = *tooltip.rows().last().unwrap();
+        assert!(last.bottom() + BEVEL + PAD <= tooltip.height);
+    }
+
+    #[test]
+    fn blank_lines_space_the_text_but_not_at_the_end() {
+        let tooltip = laid_out("Item", "one\n\ntwo\n\n").expect("something to show");
+        assert_eq!(tooltip.description, vec!["one", "", "two"]);
+    }
+
+    #[test]
+    fn too_many_lines_are_cut_visibly() {
+        let tooltip = laid_out("Item", "a\nb\nc\nd\ne\nf").expect("something to show");
+        assert_eq!(tooltip.description.len(), MAX_LINES);
+        assert_eq!(tooltip.description.last().unwrap(), "d…");
     }
 
     #[test]
